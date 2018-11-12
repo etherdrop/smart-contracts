@@ -116,9 +116,14 @@ contract EtherDrop is Pausable {
 		require(0 < order && order < 4 && price > 1e16 && price < 1e18);
 		
 		/*
-		 * infer queue size
+		 * queue size
 		 */
 		for(uint o = 1; o < order; o++) qMax *= 10;
+
+        /*
+	     * subscription price
+	     */
+	    priceWei = price;
 		
 		/*
 		 * initial round & block start
@@ -147,7 +152,7 @@ contract EtherDrop is Pausable {
     function() public payable whenNotPaused {
 
 		/*
-		 * only accounts are allowed to participate
+		 * contracts are not allowed to participate
 		 */
         require(tx.origin == msg.sender && msg.value >= priceWei);
 	
