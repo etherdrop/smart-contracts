@@ -1,11 +1,8 @@
 pragma solidity ^0.4.20;
 
 /**
- * @author FadyAro
- *
- * 22.07.2018
- *
- *
+ * @author EtherDrop
+ * repository: https://github.com/etherdrop
  */
 contract Ownable {
 
@@ -27,6 +24,7 @@ contract Ownable {
 contract Pausable is Ownable {
 
     event Pause();
+	
     event Unpause();
 
     bool public paused = false;
@@ -56,7 +54,7 @@ contract EtherDrop is Pausable {
     /*
      * subscription queue size: power of 10
      */
-	uint qMax = 10;
+	uint qMax;
     
 	/*
      * Queue Order - Log10 qMax
@@ -79,9 +77,9 @@ contract EtherDrop is Pausable {
      */
 	uint _lock;
 	
-	 /*
-      * last round block
-      */
+	/*
+     * last round block
+     */
 	uint _block;
     
 	/*
@@ -113,12 +111,13 @@ contract EtherDrop is Pausable {
 		/* 
 		 * queue order and price limits 
 		 */
-		require(0 < order && order < 4 && price > 1e16 && price < 1e18);
+		require(0 < order && order < 4 && price >= 1e16 && price <= 1e18);
 		
 		/*
 		 * queue size
 		 */
-		for(uint o = 1; o < order; o++) qMax *= 10;
+		dMax = order;
+		qMax = 10**order;
 
         /*
 	     * subscription price
@@ -133,10 +132,12 @@ contract EtherDrop is Pausable {
 	}
 	
 	/*
-	 * returns current drop stats: [ round, position, max, price, block]
+	 * returns current drop stats: [ round, position, max, price, block, lock]
 	 */
-    function stat() public view returns (uint round, uint position, uint max, uint price, uint blok) {
-        return ( _round - (_queue.length == qMax ? 1 : 0), _queue.length, qMax, priceWei, _block);
+    function stat() public view returns (uint round, uint position, uint max, 
+        uint price, uint blok, uint lock) {
+        return ( _round - (_queue.length == qMax ? 1 : 0), _queue.length, qMax, 
+            priceWei, _block, _lock);
     }
 	
 	/*
@@ -161,11 +162,6 @@ contract EtherDrop is Pausable {
 		 */
 		if (_lock > 0 && block.number >= _lock) {	
 			/*
-			 * reset lock
-			 */
-            _lock = 0;
-			
-			/*
 			 * random winner ticket position
 			 * block hash number derivation
 			 */
@@ -189,13 +185,23 @@ contract EtherDrop is Pausable {
 			/*
 			 * log ether drop event
 			 */
-			emit NewDropOut(_queue[_winpos], _round - 1, _winpos, _reward);
+			emit NewDropOut(_queue[_winpos], _round - 1, _winpos + 1, _reward);
+			
+			/*
+			 * update the block number
+			 */
+            _block = block.number;
+            
+            /*
+			 * reset lock
+			 */
+            _lock = 0;
 			
 			/*
 			 * queue reset
 			 */
 			delete _queue;
-        } 
+        }
 		/*
 		 * prevent round Txn(s) in one block overflow
 		 */
@@ -228,8 +234,7 @@ contract EtherDrop is Pausable {
 		 */
         if (_queue.length == qMax) {
             _round++;
-            _lock = _block + 1;
-            _block = block.number;
+            _lock = block.number + 1;
         }
     }
 
